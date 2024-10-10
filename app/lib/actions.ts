@@ -21,6 +21,15 @@ const FormSchema = z.object({
   date: z.string(),
 });
 
+const FormSchemaCustomer = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string(),
+  image_url: z.string(),
+});
+
+const EditCustomer = FormSchemaCustomer.omit({ id: true });
+
 const CreateInvoice = FormSchema.omit({ id: true, date: true });
 const UpdateInvoice = FormSchema.omit({ date: true, id: true });
 
@@ -70,6 +79,35 @@ export async function createInvoice(prevState: State, formData: FormData) {
   // Revalidate the cache for the invoices page and redirect the user.
   revalidatePath('/dashboard/invoices');
   redirect('/dashboard/invoices');
+}
+
+export async function updateCustomer(
+  id: string,
+  prevState: State,
+  formData: FormData,
+) {
+  const validatedFields = EditCustomer.safeParse({
+    id: formData.get('id'),
+    name: formData.get('name'),
+    email: formData.get('email'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Missing Fields. Failed to Update Customer.',
+    };
+  }
+
+  const { name, email } = validatedFields.data;
+
+  try {
+    await sql`UPDATE customer
+              SET name = ${name}, email = ${email}
+              WHERE id = ${id}`;
+  } catch (error) {
+    return { message: 'Database Error: Failed to Update Customer.' };
+  }
 }
 
 export async function updateInvoice(
